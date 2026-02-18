@@ -17,7 +17,7 @@ class QCController extends Controller
         $row_cnt = count($modules);
         
         // Get last QC scanned barcode
-        $lastResult = DB::select("SELECT Barcode, ModuleModel, QCStatus, RepairArea, DateQC, idOrder FROM orderdetails WHERE QCAgent = ? AND DateQC > timestamp(CURRENT_DATE) ORDER BY DateQC DESC LIMIT 1", [$rn]);
+        $lastResult = DB::select("SELECT Barcode, ModuleModel, QCStatus, DateQC, idOrder FROM orderdetails WHERE QCAgent = ? AND DateQC > timestamp(CURRENT_DATE) ORDER BY DateQC DESC LIMIT 1", [$rn]);
         $lastBarcode = !empty($lastResult) ? $lastResult[0] : null;
         
         return view('qc.index', compact('modules', 'row_cnt', 'lastBarcode'));
@@ -72,7 +72,7 @@ class QCController extends Controller
         }
         
         // Get today's rejected modules (QC Status IS NOT NULL and doesn't contain "Passed")
-        $modules = DB::select("SELECT repairer, Barcode, idOrder, QCStatus, QCRejectedArea FROM orderdetails WHERE DateQC > CURRENT_DATE AND QCStatus IS NOT NULL ORDER BY repairer ASC");
+        $modules = DB::select("SELECT repairer as repairer, Barcode, idOrder, QCStatus FROM orderdetails WHERE DateQC > CURRENT_DATE AND QCStatus IS NOT NULL ORDER BY repairer ASC");
         
         return view('qc.rejected', compact('modules'));
     }

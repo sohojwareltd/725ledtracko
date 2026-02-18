@@ -27,8 +27,7 @@ class ReceptionController extends Controller
         $detailsResult = DB::select("SELECT idOrder, ModuleModel, COUNT(*) as countable FROM orderdetails WHERE idOrder = ? GROUP BY idOrder, ModuleModel ORDER BY ModuleModel", [$idOrder]);
         $details = $detailsResult;
         
-        $modulesResult = DB::select("SELECT ModuleName from modules where idModule in (SELECT idModules from companymodules where idCompany = (SELECT idCompany from company where CompanyName = (SELECT CompanyName FROM orders where idOrder = ?)))", [$idOrder]);
-        $modules = $modulesResult;
+        $modules = []; // TODO: modules, companymodules, company tables not in migration
         
         $topResult = DB::select("SELECT ModuleModel from orderdetails where idOrder = ? order by DateReceived desc LIMIT 1", [$idOrder]);
         $topModel = !empty($topResult) ? $topResult[0]->ModuleModel : null;
@@ -69,7 +68,7 @@ class ReceptionController extends Controller
     {
         $countmod = $request->input('countmod', 0);
         
-        DB::update("UPDATE orders SET orderstatus = 'Dropped off', TotModulesReceived = ?, DateOrderReceived = NOW() WHERE idOrder = ?", [$countmod, $idOrder]);
+        DB::update("UPDATE orders SET OrderStatus = 'Dropped off', TotModulesReceived = ?, DateDroppedOff = NOW() WHERE idOrder = ?", [$countmod, $idOrder]);
         
         return redirect()->route('reception.index');
     }

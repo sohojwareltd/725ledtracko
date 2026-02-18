@@ -116,7 +116,6 @@ function aviso(url){
                         <td>{{ $module->Barcode }}</td>
                         <td>{{ $module->ModuleModel }}</td>
                         <td>{{ $module->Damage }}</td>
-                        <td>{{ $module->RepairArea }}</td>
                         <td>{{ $module->DateRepair ? date('M d, Y H:i', strtotime($module->DateRepair)) : '-' }}</td>
                         <td>
                             <a href="javascript:;" onclick="aviso('{{ route('repair.remove', [$module->Barcode, $module->idOrder]) }}'); return false;" class="btn btn-danger">Remove</a>

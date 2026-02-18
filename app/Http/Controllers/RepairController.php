@@ -17,7 +17,7 @@ class RepairController extends Controller
         $row_cnt = count($modules);
         
         // Get last repaired barcode
-        $lastResult = DB::select("SELECT Barcode, ModuleModel, Damage, RepairArea, DateRepair, idOrder FROM orderdetails WHERE repairer = ? AND DateRepair > timestamp(CURRENT_DATE) ORDER BY DateRepair DESC LIMIT 1", [$rn]);
+        $lastResult = DB::select("SELECT Barcode, ModuleModel, Damage, DateRepair, idOrder FROM orderdetails WHERE repairer = ? AND DateRepair > timestamp(CURRENT_DATE) ORDER BY DateRepair DESC LIMIT 1", [$rn]);
         $lastBarcode = !empty($lastResult) ? $lastResult[0] : null;
         
         return view('repair.index', compact('modules', 'row_cnt', 'lastBarcode'));
@@ -43,8 +43,8 @@ class RepairController extends Controller
         
         $idOrder = $orderResult[0]->idOrder;
         
-        DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ?, RepairArea = ? WHERE idOrder = ? AND Barcode = ?", [
-            $Damage, $rn, $DamageArea, $idOrder, $Barcode
+        DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ? WHERE idOrder = ? AND Barcode = ?", [
+            $Damage, $rn, $idOrder, $Barcode
         ]);
         
         DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "Repair module:$Barcode"]);
@@ -56,7 +56,7 @@ class RepairController extends Controller
     {
         $rn = Auth::user()->username;
         
-        DB::update("UPDATE orderdetails SET repairer = '' WHERE Barcode = ?", [$Barcode]);
+        DB::update("UPDATE orderdetails SET repairer = NULL, DateRepair = NULL WHERE Barcode = ?", [$Barcode]);
         DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "Un repair module:$Barcode"]);
         
         return redirect()->route('repair.index');

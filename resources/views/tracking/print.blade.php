@@ -84,8 +84,7 @@
                 <td>{{ $module->DateReceived ? date('M d, Y', strtotime($module->DateReceived)) : '-' }}</td>
                 <td>{{ $module->DateRepair ? date('M d, Y', strtotime($module->DateRepair)) : '-' }}</td>
                 <td>{{ $module->DateQC ? date('M d, Y', strtotime($module->DateQC)) : '-' }}</td>
-                <td>{{ $module->repairer }}</td>
-                <td>{{ $module->RepairArea }}</td>
+                <td>{{ $module->repairer ?? '-' }}</td>
                 <td>{{ $module->QCStatus ? strtoupper($module->QCStatus) : '-' }}</td>
                 <td>{{ $module->QCAgent }}</td>
             </tr>

@@ -65,7 +65,6 @@
                         <th>Barcode</th>
                         <th>Order ID</th>
                         <th>QC Status</th>
-                        <th>QC Rejected Area</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,7 +74,6 @@
                         <td>{{ $row->Barcode }}</td>
                         <td>#{{ $row->idOrder }}</td>
                         <td>{{ $row->QCStatus ?? '-' }}</td>
-                        <td>{{ $row->QCRejectedArea ?? '-' }}</td>
                     </tr>
                     @endforeach
                 </tbody>

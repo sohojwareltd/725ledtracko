@@ -116,7 +116,6 @@ function aviso(url){
                         <td>{{ $module->Barcode }}</td>                        <td>{{ $module->ModuleModel }}</td>
                         <td class="status-text {{ $module->QCStatus ? \App\Helpers\StatusHelper::statusClass($module->QCStatus) : '' }}">{{ $module->QCStatus ? strtoupper($module->QCStatus) : '' }}</td>
                         <td>{{ $module->DateQC ? date('M d, Y H:i', strtotime($module->DateQC)) : "-" }}</td>
-                        <td>{{ $module->RepairArea }}</td>
                         <td>{{ $module->Damage ?? '-' }}</td>
                         <td>
                             <a href="javascript:;" onclick="aviso('{{ route('qc.remove', [$module->Barcode, $module->idOrder]) }}'); return false;" class="btn btn-danger">Remove</a>

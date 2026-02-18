@@ -37,7 +37,6 @@
                     <td>{{ $row->DateRepair ? date('M d, Y', strtotime($row->DateRepair)) : '-' }}</td>
                     <td>{{ $row->DateQC ? date('M d, Y', strtotime($row->DateQC)) : '-' }}</td>
                     <td>{{ $row->Damage ?? '-' }}</td>
-                    <td>{{ $row->RepairArea ?? '-' }}</td>
                     <td>{{ $row->repairer ?? '-' }}</td>
                     <td>{{ $row->QCAgent ?? '-' }}</td>
                 </tr>
