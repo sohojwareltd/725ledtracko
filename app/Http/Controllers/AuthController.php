@@ -6,7 +6,6 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
@@ -43,7 +42,7 @@ class AuthController extends Controller
         $passwordIsValid = false;
         if ($storedPassword !== '') {
             if ($isHashedPassword) {
-                $passwordIsValid = Hash::check($request->password, $storedPassword);
+                $passwordIsValid = password_verify($request->password, $storedPassword);
             } else {
                 $passwordIsValid = hash_equals($storedPassword, $request->password);
             }
