@@ -30,14 +30,24 @@ class AuthController extends Controller
         $passwordColumn = Schema::hasColumn('users', 'Password') ? 'Password' : 'password';
         $username = trim($request->username);
 
-        // Case-sensitive username lookup (matching original login.php)
+        // Try exact-case lookup first, then fallback to case-insensitive lookup
         $user = User::whereRaw("BINARY {$usernameColumn} = ?", [$username])->first();
+        if (!$user) {
+            $user = User::whereRaw("LOWER({$usernameColumn}) = ?", [strtolower($username)])->first();
+        }
 
         $storedPassword = $user ? (string) ($user->{$passwordColumn} ?? $user->password ?? '') : '';
-        $passwordIsValid = $storedPassword !== '' && (
-            Hash::check($request->password, $storedPassword) ||
-            hash_equals($storedPassword, $request->password)
-        );
+        $hashInfo = password_get_info($storedPassword);
+        $isHashedPassword = !empty($hashInfo['algo']);
+
+        $passwordIsValid = false;
+        if ($storedPassword !== '') {
+            if ($isHashedPassword) {
+                $passwordIsValid = Hash::check($request->password, $storedPassword);
+            } else {
+                $passwordIsValid = hash_equals($storedPassword, $request->password);
+            }
+        }
 
         if (!$user || !$passwordIsValid) {
             return back()->withErrors(['login' => 'The user name or password are NOT correct, please:'])->withInput(['username' => $username]);

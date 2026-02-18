@@ -5,14 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
     protected $table = 'users';
-    protected $primaryKey = 'idUser';
-    public $timestamps = false;
+    protected $primaryKey = 'id';
+    public $timestamps = true;
+
+    protected static array $columnExistsCache = [];
 
     protected $fillable = [
         'UserName',
@@ -56,6 +59,27 @@ class User extends Authenticatable
     public function getAuthPassword(): string
     {
         return (string) ($this->Password ?? $this->password ?? '');
+    }
+
+    public function getKeyName()
+    {
+        return $this->hasTableColumn('idUser') ? 'idUser' : 'id';
+    }
+
+    public function usesTimestamps(): bool
+    {
+        return $this->hasTableColumn('created_at') && $this->hasTableColumn('updated_at');
+    }
+
+    protected function hasTableColumn(string $column): bool
+    {
+        $key = $this->getTable() . '.' . $column;
+
+        if (!array_key_exists($key, self::$columnExistsCache)) {
+            self::$columnExistsCache[$key] = Schema::hasColumn($this->getTable(), $column);
+        }
+
+        return self::$columnExistsCache[$key];
     }
 
     public function hasRole($roleCheck)
