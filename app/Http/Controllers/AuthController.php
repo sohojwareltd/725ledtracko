@@ -68,10 +68,8 @@ class AuthController extends Controller
 
     private function redirectByRole(User $user)
     {
-        // Original: Admin (Pepe, Ale, Luis) -> secreta.php -> orders.php
-        // Technician -> secretarepair.php -> repair.php
-        $username = strtolower(trim($user->username ?? ''));
-        if (in_array($username, ['pepe', 'ale', 'luis'], true)) {
+        $role = strtolower(trim((string) ($user->role ?? '')));
+        if ($role === 'admin') {
             return redirect('/orders');
         }
         return redirect('/repair');

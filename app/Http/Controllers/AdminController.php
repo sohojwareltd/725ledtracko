@@ -10,12 +10,10 @@ class AdminController extends Controller
 {
     public function index()
     {
-        // Admin users only (matching original Admin.php check)
         $user = Auth::user();
-        $rn = strtolower(trim($user->username ?? ''));
+        $role = strtolower(trim((string) ($user->role ?? '')));
         
-        // Check if user is admin (case-insensitive)
-        if (!in_array($rn, ['pepe', 'ale', 'luis'], true)) {
+        if ($role !== 'admin') {
             return redirect('/')->with('error', "Access denied. Administrator access only.");
         }
         
@@ -27,9 +25,9 @@ class AdminController extends Controller
 
     public function updateMessage(Request $request)
     {
-        $rn = strtolower(trim(Auth::user()->username ?? ''));
+        $role = strtolower(trim((string) (Auth::user()->role ?? '')));
         
-        if (!in_array($rn, ['pepe', 'ale', 'luis'], true)) {
+        if ($role !== 'admin') {
             return redirect('/')->with('error', 'Access denied.');
         }
         
@@ -46,9 +44,9 @@ class AdminController extends Controller
 
     public function setRepaired(Request $request)
     {
-        $rn = strtolower(trim(Auth::user()->username ?? ''));
+        $role = strtolower(trim((string) (Auth::user()->role ?? '')));
         
-        if (!in_array($rn, ['pepe', 'ale', 'luis'], true)) {
+        if ($role !== 'admin') {
             return redirect('/')->with('error', 'Access denied.');
         }
         

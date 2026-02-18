@@ -65,9 +65,9 @@ class QCController extends Controller
     {
         // Admin access only
         $user = Auth::user();
-        $rn = strtolower(trim($user->username ?? ''));
+        $role = strtolower(trim((string) ($user->role ?? '')));
         
-        if (!in_array($rn, ['pepe', 'ale', 'luis'], true)) {
+        if ($role !== 'admin') {
             return redirect('/')->with('error', 'Access denied.');
         }
         

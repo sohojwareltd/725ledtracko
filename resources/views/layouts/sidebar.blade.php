@@ -1,7 +1,8 @@
 @php
     $currentRoute = Route::currentRouteName();
     $username = Auth::user()->username ?? '';
-    $isAdmin = in_array(strtolower(trim($username)), ['pepe', 'ale', 'luis'], true);
+    $role = strtolower(trim((string) (Auth::user()->role ?? '')));
+    $isAdmin = $role === 'admin';
     
     $navItems = [
         ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'speedometer2', 'match' => ['dashboard']],

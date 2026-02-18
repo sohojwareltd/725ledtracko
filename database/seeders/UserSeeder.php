@@ -5,96 +5,66 @@ namespace Database\Seeders;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class UserSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     * Users from original PHP project (d:\laragon\www\725tracko\login.php)
      */
     public function run(): void
     {
-        // Admin/Manager Users (redirect to secreta.php in original)
-        User::create([
-            'UserName' => 'Pepe',
-            'Password' => Hash::make('0615'),
-            'FullName' => 'Pepe - Manager',
-            'Role' => 'Admin',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+        $configuredUsers = json_decode((string) env('DEFAULT_USERS_JSON', '[]'), true);
 
-        User::create([
-            'UserName' => 'Ale',
-            'Password' => Hash::make('1610'),
-            'FullName' => 'Ale - Manager',
-            'Role' => 'Admin',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+        if (!is_array($configuredUsers) || empty($configuredUsers)) {
+            return;
+        }
 
-        User::create([
-            'UserName' => 'Luis',
-            'Password' => Hash::make('2088'),
-            'FullName' => 'Luis - Manager',
-            'Role' => 'Admin',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+        $usernameColumn = Schema::hasColumn('users', 'UserName') ? 'UserName' : 'username';
+        $passwordColumn = Schema::hasColumn('users', 'Password') ? 'Password' : 'password';
+        $roleColumn = Schema::hasColumn('users', 'Role') ? 'Role' : 'role';
+        $fullNameColumn = Schema::hasColumn('users', 'FullName') ? 'FullName' : null;
+        $activeColumn = Schema::hasColumn('users', 'Active') ? 'Active' : null;
+        $createdDateColumn = Schema::hasColumn('users', 'CreatedDate') ? 'CreatedDate' : null;
 
-        // Technician Users (redirect to secretarepair.php in original)
-        User::create([
-            'UserName' => 'Martin',
-            'Password' => Hash::make('1968'),
-            'FullName' => 'Martin - Technician',
-            'Role' => 'Technician',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+        foreach ($configuredUsers as $user) {
+            if (!is_array($user)) {
+                continue;
+            }
 
-        User::create([
-            'UserName' => 'Luis1C',
-            'Password' => Hash::make('4351'),
-            'FullName' => 'Luis C - Technician',
-            'Role' => 'Technician',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+            $username = trim((string) ($user['username'] ?? ''));
+            $plainOrHashedPassword = (string) ($user['password'] ?? '');
 
-        User::create([
-            'UserName' => 'Hugo',
-            'Password' => Hash::make('3096'),
-            'FullName' => 'Hugo - Technician',
-            'Role' => 'Technician',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+            if ($username === '' || $plainOrHashedPassword === '') {
+                continue;
+            }
 
-        User::create([
-            'UserName' => 'Jefe',
-            'Password' => Hash::make('2651'),
-            'FullName' => 'Jefe - Technician',
-            'Role' => 'Technician',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+            $hashInfo = password_get_info($plainOrHashedPassword);
+            $passwordValue = !empty($hashInfo['algo'])
+                ? $plainOrHashedPassword
+                : Hash::make($plainOrHashedPassword);
 
-        User::create([
-            'UserName' => 'Anthony',
-            'Password' => Hash::make('2834'),
-            'FullName' => 'Anthony - Technician',
-            'Role' => 'Technician',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+            $data = [
+                $usernameColumn => $username,
+                $passwordColumn => $passwordValue,
+                $roleColumn => (string) ($user['role'] ?? 'Technician'),
+            ];
 
-        User::create([
-            'UserName' => 'Jua1n',
-            'Password' => Hash::make('1234'),
-            'FullName' => 'Juan - Technician',
-            'Role' => 'Technician',
-            'Active' => true,
-            'CreatedDate' => now(),
-        ]);
+            if ($fullNameColumn) {
+                $data[$fullNameColumn] = (string) ($user['full_name'] ?? $username);
+            }
+
+            if ($activeColumn) {
+                $data[$activeColumn] = (bool) ($user['active'] ?? true);
+            }
+
+            if ($createdDateColumn) {
+                $data[$createdDateColumn] = now();
+            }
+
+            User::updateOrCreate([
+                $usernameColumn => $username,
+            ], $data);
+        }
     }
 }

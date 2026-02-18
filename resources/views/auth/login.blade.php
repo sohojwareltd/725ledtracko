@@ -29,7 +29,7 @@
                 <label class="muted" for="username">User name</label>
                 <input class="form-control @error('username') error @enderror" 
                        type="text" id="username" name="username" 
-                       placeholder="e.g. admin" 
+                      placeholder="Enter user name" 
                        value="{{ old('username') }}" 
                        required autofocus>
             </div>
