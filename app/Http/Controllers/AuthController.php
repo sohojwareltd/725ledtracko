@@ -6,6 +6,8 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Schema;
 
 class AuthController extends Controller
 {
@@ -24,11 +26,21 @@ class AuthController extends Controller
             'password' => 'required|string',
         ]);
 
-        // Case-sensitive username lookup (matching original login.php)
-        $user = User::whereRaw('BINARY username = ?', [$request->username])->first();
+        $usernameColumn = Schema::hasColumn('users', 'UserName') ? 'UserName' : 'username';
+        $passwordColumn = Schema::hasColumn('users', 'Password') ? 'Password' : 'password';
+        $username = trim($request->username);
 
-        if (!$user || $user->password !== $request->password) {
-            return back()->withErrors(['login' => 'The user name or password are NOT correct, please:'])->withInput(['username' => $request->username]);
+        // Case-sensitive username lookup (matching original login.php)
+        $user = User::whereRaw("BINARY {$usernameColumn} = ?", [$username])->first();
+
+        $storedPassword = $user ? (string) ($user->{$passwordColumn} ?? $user->password ?? '') : '';
+        $passwordIsValid = $storedPassword !== '' && (
+            Hash::check($request->password, $storedPassword) ||
+            hash_equals($storedPassword, $request->password)
+        );
+
+        if (!$user || !$passwordIsValid) {
+            return back()->withErrors(['login' => 'The user name or password are NOT correct, please:'])->withInput(['username' => $username]);
         }
 
         // Log audit (matching original)
