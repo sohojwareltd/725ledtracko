@@ -32,15 +32,11 @@ class TrackingController extends Controller
         }
         
         $where = "";
-        $Damage = $request->input('Damage', 'ALL');
-        $Model = $request->input('Model', 'ALL');
+        $Damage = $request->input('Damage') ?: 'ALL';
+        $Model = $request->input('Model') ?: 'ALL';
         
         // Filter logic matching original TrackOrder.php - uses LIKE not =
-        if ($Damage === '' && $Model === '') {
-            // No filter when both empty
-            $Damage = 'ALL';
-            $Model = 'ALL';
-        } elseif ($Damage === "ALL" && $Model === "ALL") {
+        if ($Damage === "ALL" && $Model === "ALL") {
             // No filter - show all
         } elseif ($Damage === "ALL" && $Model !== "ALL") {
             $where = " AND ModuleModel LIKE " . DB::connection()->getPdo()->quote($Model);

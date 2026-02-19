@@ -35,8 +35,8 @@
         <form action="{{ route('tracking.order') }}" method="POST" class="section-stack">
             @csrf
             <input type="text" class="form-control" name="idOrder" placeholder="Enter Order ID" maxlength="10" required>
-            <input type="hidden" name="Damage" value="">
-            <input type="hidden" name="Model" value="">
+            <input type="hidden" name="Damage" value="ALL">
+            <input type="hidden" name="Model" value="ALL">
             <button type="submit" class="btn btn-primary w-100">Go</button>
         </form>
     </div>
