@@ -28,14 +28,18 @@
 
     <nav class="app-nav">
         @foreach($navItems as $item)
-            <a class="app-nav__link {{ in_array($currentRoute, $item['match']) ? 'is-active' : '' }}" href="{{ route($item['route']) }}">
+            <a class="app-nav__link {{ in_array($currentRoute, $item['match']) ? 'is-active' : '' }}" 
+               href="{{ route($item['route']) }}" 
+               title="{{ $item['label'] }}">
                 <i class="bi bi-{{ $item['icon'] }}"></i>
                 <span>{{ $item['label'] }}</span>
             </a>
         @endforeach
         
         @if($isAdmin)
-            <a class="app-nav__link {{ $currentRoute === 'admin.index' ? 'is-active' : '' }}" href="{{ route('admin.index') }}">
+            <a class="app-nav__link {{ $currentRoute === 'admin.index' ? 'is-active' : '' }}" 
+               href="{{ route('admin.index') }}"
+               title="Administrator">
                 <i class="bi bi-shield-check"></i>
                 <span>Administrator</span>
             </a>
