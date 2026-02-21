@@ -64,6 +64,13 @@ Route::middleware('auth')->group(function () {
     Route::get('/admin', [AdminController::class, 'index'])->name('admin.index');
     Route::post('/admin/message', [AdminController::class, 'updateMessage'])->name('admin.message');
     Route::post('/admin/set-repaired', [AdminController::class, 'setRepaired'])->name('admin.setRepaired');
+
+    // Admin — Companies & Modules
+    Route::get('/admin/companies', [AdminController::class, 'companies'])->name('admin.companies');
+    Route::post('/admin/companies', [AdminController::class, 'storeCompany'])->name('admin.companies.store');
+    Route::post('/admin/companies/{id}/delete', [AdminController::class, 'deleteCompany'])->name('admin.companies.delete');
+    Route::post('/admin/companies/{id}/add-module', [AdminController::class, 'storeCompanyModule'])->name('admin.companies.addModule');
+    Route::post('/admin/companies/{companyId}/delete-module/{moduleId}', [AdminController::class, 'deleteCompanyModule'])->name('admin.companies.deleteModule');
 });
 
 // Remove everything below - old debug routes

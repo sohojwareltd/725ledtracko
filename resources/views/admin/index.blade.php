@@ -15,6 +15,19 @@
     <div class="surface">
         <div class="section-header">
             <div>
+                <p class="muted">Company & module models</p>
+                <h2 class="section-title">Manage Companies & Modules</h2>
+            </div>
+        </div>
+        <p class="muted" style="margin-bottom:1rem;">Add companies, create module names under each company. Modules created here will appear in the reception dropdown automatically.</p>
+        <a href="{{ route('admin.companies') }}" class="btn btn-primary">
+            <i class="bi bi-building"></i> Open Companies & Modules
+        </a>
+    </div>
+
+    <div class="surface">
+        <div class="section-header">
+            <div>
                 <p class="muted">Module management</p>
                 <h2 class="section-title">Set "Repaired" to all modules</h2>
             </div>
