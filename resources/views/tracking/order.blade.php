@@ -108,6 +108,7 @@
                         <th>{{ $module->DateRepair ? date('m-d-Y', strtotime($module->DateRepair)) : '' }}</th>
                         <th>{{ $module->DateQC ? date('m-d-Y', strtotime($module->DateQC)) : '' }}</th>
                         <th>{{ $module->repairer ?? '-' }}</th>
+                        <th>{{ $module->RepairArea ?? '-' }}</th>
                         <th>{{ $module->QCStatus }}</th>
                         <th>{{ $module->QCAgent }}</th>
                     </tr>

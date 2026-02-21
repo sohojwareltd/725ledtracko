@@ -43,8 +43,8 @@ class RepairController extends Controller
         
         $idOrder = $orderResult[0]->idOrder;
         
-        DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ? WHERE idOrder = ? AND Barcode = ?", [
-            $Damage, $rn, $idOrder, $Barcode
+        DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ?, RepairArea = ? WHERE idOrder = ? AND Barcode = ?", [
+            $Damage, $rn, $DamageArea, $idOrder, $Barcode
         ]);
         
         DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "Repair module:$Barcode"]);

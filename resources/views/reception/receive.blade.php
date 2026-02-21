@@ -36,6 +36,65 @@
     margin-bottom: calc(var(--spacing-unit) * 1);
     opacity: 0.8;
 }
+
+/* Toast Notification Styles */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 9999;
+}
+.toast {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: calc(var(--spacing-unit) * 3);
+    margin-bottom: calc(var(--spacing-unit) * 2);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: calc(var(--spacing-unit) * 2);
+    min-width: 300px;
+    animation: slideInRight 0.3s ease-out;
+}
+.toast.success { border-left: 4px solid #22c55e; }
+.toast.error   { border-left: 4px solid #ef4444; }
+.toast-icon { font-size: 1.5rem; flex-shrink: 0; }
+.toast.success .toast-icon { color: #22c55e; }
+.toast.error   .toast-icon { color: #ef4444; }
+.toast-content { flex: 1; }
+.toast-title { font-weight: 600; margin-bottom: 4px; }
+.toast-message { font-size: 0.9rem; opacity: 0.8; }
+.toast-close {
+    background: none;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.2s;
+}
+.toast-close:hover { opacity: 1; }
+@keyframes slideInRight {
+    from { transform: translateX(100%); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideOutRight {
+    from { transform: translateX(0);    opacity: 1; }
+    to   { transform: translateX(100%); opacity: 0; }
+}
+.toast.hiding { animation: slideOutRight 0.3s ease-out forwards; }
+
+/* Barcode Error Styles */
+.form-control.error {
+    border-color: #ef4444 !important;
+    background-color: #fef2f2 !important;
+}
+.error-message {
+    color: #ef4444;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: none;
+}
+.error-message.show { display: block; }
 </style>
 
 <header class="page-header">
@@ -117,6 +176,7 @@
                     <label class="muted">Barcode</label>
                     <input id="here" minlength="4" maxlength="7" placeholder="Scan barcode..." type="text" 
                            name="Barcode" tabindex="1" required autofocus class="form-control">
+                    <div id="barcodeError" class="error-message">Barcode must be 1000 or higher</div>
                     <input type="hidden" name="idOrder" value="{{ $order->idOrder }}">
                 </div>
             </div>
@@ -175,15 +235,90 @@
         </div>
     </div>
 </section>
+
+<!-- Toast Container -->
+<div class="toast-container" id="toastContainer"></div>
+
 @endsection
 
 @section('scripts')
 <script src="https://code.jquery.com/jquery-2.2.4.js"></script>
 <script>
-$('#here').keyup(function(){
-    if(this.value.length == 7){ 
-        $('#subHere').click(); 
+let barcodeValid = true;
+
+$('#here').on('input keyup', function(){
+    const value = parseInt(this.value);
+    const inputField = $(this);
+    const errorMessage = $('#barcodeError');
+    const submitButton = $('#subHere');
+
+    // Barcode 0-999 invalid, 1000+ valid
+    if (this.value && value >= 0 && value <= 999) {
+        inputField.addClass('error');
+        errorMessage.addClass('show');
+        submitButton.prop('disabled', true);
+        barcodeValid = false;
+    } else {
+        inputField.removeClass('error');
+        errorMessage.removeClass('show');
+        submitButton.prop('disabled', false);
+        barcodeValid = true;
+    }
+
+    // Auto-submit when 7 digits AND valid
+    if (this.value.length == 7 && barcodeValid) {
+        $('#subHere').click();
     }
 });
+
+// Prevent form submission if barcode is invalid
+$('form').on('submit', function(e) {
+    const barcodeValue = parseInt($('#here').val());
+    if ($('#here').val() && barcodeValue >= 0 && barcodeValue <= 999) {
+        e.preventDefault();
+        showToast('error', 'Invalid Barcode', 'Barcode must be 1000 or higher');
+        return false;
+    }
+});
+
+function showToast(type, title, message) {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    const icon = type === 'success' ? 'bi-check-circle-fill' : 'bi-exclamation-circle-fill';
+    toast.innerHTML = `
+        <div class="toast-icon"><i class="bi ${icon}"></i></div>
+        <div class="toast-content">
+            <div class="toast-title">${title}</div>
+            <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="closeToast(this)"><i class="bi bi-x"></i></button>
+    `;
+    container.appendChild(toast);
+    setTimeout(() => { closeToast(toast.querySelector('.toast-close')); }, 5000);
+}
+
+function closeToast(button) {
+    const toast = button.closest('.toast');
+    toast.classList.add('hiding');
+    setTimeout(() => { toast.remove(); }, 300);
+}
+
+// Show toast based on Laravel session flash
+@if(session('success'))
+    showToast('success', 'Success!', 'Module added successfully.');
+@endif
+@if(session('error'))
+    @php
+        $errMap = [
+            'duplicate' => 'This barcode is already registered for the order.',
+            'required'  => 'Module model, barcode, and order are required.',
+            'invalid'   => 'Barcode must contain digits only.',
+            'failed'    => 'The insertion was not complete. Please try again.',
+        ];
+        $errMsg = $errMap[session('error')] ?? 'An error occurred. Please try again.';
+    @endphp
+    showToast('error', 'Error!', '{{ $errMsg }}');
+@endif
 </script>
 @endsection

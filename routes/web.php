@@ -8,12 +8,17 @@ use App\Http\Controllers\QCController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\TrackingController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\CustomerTrackingController;
 use Illuminate\Support\Facades\Route;
 
 // Authentication Routes
 Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
 Route::post('/login', [AuthController::class, 'login'])->name('login.store');
 Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+
+// Public Customer Tracking (no login required)
+Route::get('/track', [CustomerTrackingController::class, 'index'])->name('customer.track');
+Route::post('/track', [CustomerTrackingController::class, 'track'])->name('customer.track.post');
 
 // Protected Routes
 Route::middleware('auth')->group(function () {

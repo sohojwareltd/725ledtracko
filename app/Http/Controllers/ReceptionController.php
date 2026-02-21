@@ -27,7 +27,16 @@ class ReceptionController extends Controller
         $detailsResult = DB::select("SELECT idOrder, ModuleModel, COUNT(*) as countable FROM orderdetails WHERE idOrder = ? GROUP BY idOrder, ModuleModel ORDER BY ModuleModel", [$idOrder]);
         $details = $detailsResult;
         
-        $modules = []; // TODO: modules, companymodules, company tables not in migration
+        $modules = DB::select(
+            "SELECT ModuleName FROM modules WHERE idModule IN (
+                SELECT idModules FROM companymodules WHERE idCompany = (
+                    SELECT idCompany FROM company WHERE CompanyName = (
+                        SELECT CompanyName FROM orders WHERE idOrder = ?
+                    )
+                )
+            )",
+            [$idOrder]
+        );
         
         $topResult = DB::select("SELECT ModuleModel from orderdetails where idOrder = ? order by DateReceived desc LIMIT 1", [$idOrder]);
         $topModel = !empty($topResult) ? $topResult[0]->ModuleModel : null;
