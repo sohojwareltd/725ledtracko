@@ -28,28 +28,62 @@ class RepairController extends Controller
         $rn = Auth::user()->username;
         $Damage = trim($request->input('Damage', ''));
         $DamageArea = trim($request->input('DamageArea', ''));
-        $Barcode = trim($request->input('Barcode', ''));
+        $rawBarcode = trim((string) $request->input('Barcode', ''));
+        $digitsBarcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
+
+        // Keep legacy behavior: if full value does not match, try numeric and last-4 candidates.
+        $barcodeCandidates = array_values(array_unique(array_filter([
+            $rawBarcode,
+            $digitsBarcode,
+            $digitsBarcode !== '' ? ltrim($digitsBarcode, '0') : '',
+            strlen($digitsBarcode) >= 4 ? substr($digitsBarcode, -4) : '',
+        ], static fn ($v) => $v !== '')));
         
-        if (empty($Damage) || empty($DamageArea) || empty($Barcode)) {
-            return back()->withErrors(['error' => 'Please scan the damage, damage area, and barcode.']);
+        if (empty($Damage) || empty($DamageArea) || empty($barcodeCandidates)) {
+            return redirect()->route('repair.index')->with('error', 'Please scan the damage, damage area, and barcode.');
         }
         
-        // Find latest order containing this barcode
-        $orderResult = DB::select("SELECT idOrder FROM orderdetails WHERE Barcode = ? ORDER BY idOrder DESC LIMIT 1", [$Barcode]);
+        $orderResult = [];
+        $matchedBarcode = null;
+
+        foreach ($barcodeCandidates as $candidate) {
+            $orderResult = DB::select(
+                "SELECT idOrder, Barcode FROM orderdetails WHERE Barcode = ? ORDER BY idOrder DESC LIMIT 1",
+                [$candidate]
+            );
+
+            if (!empty($orderResult)) {
+                $matchedBarcode = (string) $orderResult[0]->Barcode;
+                break;
+            }
+        }
         
         if (empty($orderResult)) {
-            return back()->withErrors(['error' => 'Barcode not found. Please verify the scan.']);
+            return redirect()->route('repair.index')->with('error', 'Barcode not found. Please verify the scan.');
         }
         
         $idOrder = $orderResult[0]->idOrder;
         
-        DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ?, RepairArea = ? WHERE idOrder = ? AND Barcode = ?", [
-            $Damage, $rn, $DamageArea, $idOrder, $Barcode
+        $updatedRows = DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ?, RepairArea = ? WHERE idOrder = ? AND Barcode = ?", [
+            $Damage, $rn, $DamageArea, $idOrder, $matchedBarcode
         ]);
+
+        if ($updatedRows === 0) {
+            // MySQL can return 0 when data is already the same (or double-submit happens quickly).
+            // If the matched row still exists, treat this as a successful capture to avoid false errors.
+            $exists = DB::select(
+                "SELECT 1 FROM orderdetails WHERE idOrder = ? AND Barcode = ? LIMIT 1",
+                [$idOrder, $matchedBarcode]
+            );
+
+            if (empty($exists)) {
+                return redirect()->route('repair.index')->with('error', 'Could not add module. Please scan again.');
+            }
+        }
         
-        DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "Repair module:$Barcode"]);
+        DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "Repair module:$matchedBarcode"]);
         
-        return redirect()->route('repair.index');
+        return redirect()->route('repair.index')->with('success', "Module $matchedBarcode added to repair.");
     }
 
     public function remove($Barcode, $idOrder)

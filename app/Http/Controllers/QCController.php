@@ -27,28 +27,65 @@ class QCController extends Controller
     {
         $rn = Auth::user()->username;
         $QCStatus = trim($request->input('QCStatus', ''));
-        $Barcode = trim($request->input('Barcode', ''));
+        $rawBarcode = trim((string) $request->input('Barcode', ''));
+        $digitsBarcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
+
+        // Keep legacy behavior: fallback to last-4 candidate when needed.
+        $barcodeCandidates = array_values(array_unique(array_filter([
+            $rawBarcode,
+            $digitsBarcode,
+            $digitsBarcode !== '' ? ltrim($digitsBarcode, '0') : '',
+            strlen($digitsBarcode) >= 4 ? substr($digitsBarcode, -4) : '',
+        ], static fn ($v) => $v !== '')));
         
-        if (empty($QCStatus) || empty($Barcode)) {
-            return back()->withErrors(['error' => 'QC status and barcode are required.']);
+        if (empty($QCStatus) || empty($barcodeCandidates)) {
+            return redirect()->route('qc.index')->with('error', 'QC status and barcode are required.');
         }
         
-        // Find latest order for barcode that already has repair info
-        $orderResult = DB::select("SELECT idOrder FROM orderdetails WHERE Barcode = ? AND DateRepair IS NOT NULL ORDER BY idOrder DESC LIMIT 1", [$Barcode]);
+        $orderResult = [];
+        $matchedBarcode = null;
+
+        // Find latest order for candidate barcode that already has repair info.
+        foreach ($barcodeCandidates as $candidate) {
+            $orderResult = DB::select(
+                "SELECT idOrder, Barcode
+                 FROM orderdetails
+                 WHERE Barcode = ? AND DateRepair IS NOT NULL
+                 ORDER BY idOrder DESC
+                 LIMIT 1",
+                [$candidate]
+            );
+
+            if (!empty($orderResult)) {
+                $matchedBarcode = (string) $orderResult[0]->Barcode;
+                break;
+            }
+        }
         
         if (empty($orderResult)) {
-            return back()->withErrors(['error' => 'Barcode not ready for QC (missing repair data).']);
+            return redirect()->route('qc.index')->with('error', 'Barcode not ready for QC (missing repair data).');
         }
         
         $idOrder = $orderResult[0]->idOrder;
         
-        DB::update("UPDATE orderdetails SET QCStatus = ?, DateQC = NOW(), QCAgent = ? WHERE idOrder = ? AND Barcode = ?", [
-            $QCStatus, $rn, $idOrder, $Barcode
+        $updatedRows = DB::update("UPDATE orderdetails SET QCStatus = ?, DateQC = NOW(), QCAgent = ? WHERE idOrder = ? AND Barcode = ?", [
+            $QCStatus, $rn, $idOrder, $matchedBarcode
         ]);
+
+        if ($updatedRows === 0) {
+            $exists = DB::select(
+                "SELECT 1 FROM orderdetails WHERE idOrder = ? AND Barcode = ? AND DateRepair IS NOT NULL LIMIT 1",
+                [$idOrder, $matchedBarcode]
+            );
+
+            if (empty($exists)) {
+                return redirect()->route('qc.index')->with('error', 'Could not add module to QC. Please scan again.');
+            }
+        }
         
-        DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "QC module:$Barcode"]);
+        DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "QC module:$matchedBarcode"]);
         
-        return redirect()->route('qc.index');
+        return redirect()->route('qc.index')->with('success', "Module $matchedBarcode added to QC.");
     }
 
     public function remove($Barcode, $idOrder)
