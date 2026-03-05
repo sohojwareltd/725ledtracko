@@ -31,10 +31,7 @@ class RepairController extends Controller
         $rawBarcode = trim((string) $request->input('Barcode', ''));
         $Barcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
 
-        $lookupBarcodes = array_values(array_unique(array_filter([
-            $Barcode,
-            ltrim($Barcode, '0'),
-        ], static fn (string $value): bool => $value !== '')));
+        $lookupBarcodes = $this->barcodeLookupCandidates($Barcode);
 
         if (empty($Damage) || empty($DamageArea) || empty($lookupBarcodes)) {
             return redirect()->route('repair.index')->with('error', 'Please scan the damage, damage area, and barcode.');
@@ -85,6 +82,23 @@ class RepairController extends Controller
         DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "Repair module:$matchedBarcode"]);
         
         return redirect()->route('repair.index')->with('success', "Module $matchedBarcode added to repair.");
+    }
+
+    private function barcodeLookupCandidates(string $barcode): array
+    {
+        if ($barcode === '') {
+            return [];
+        }
+
+        $candidates = [$barcode];
+
+        $trimmed = $barcode;
+        while (str_starts_with($trimmed, '0') && strlen($trimmed) > 1) {
+            $trimmed = substr($trimmed, 1);
+            $candidates[] = $trimmed;
+        }
+
+        return array_values(array_unique(array_filter($candidates, static fn (string $value): bool => $value !== '')));
     }
 
     public function remove($Barcode, $idOrder)

@@ -20,16 +20,30 @@ class TrackingController extends Controller
         if ($Barcode === '') {
             $modules = [];
         } else {
-            $lookupBarcodes = array_values(array_unique(array_filter([
-                $Barcode,
-                ltrim($Barcode, '0'),
-            ], static fn (string $value): bool => $value !== '')));
+            $lookupBarcodes = $this->barcodeLookupCandidates($Barcode);
 
             $placeholders = implode(', ', array_fill(0, count($lookupBarcodes), '?'));
             $modules = DB::select("SELECT * FROM orderdetails WHERE Barcode IN ($placeholders)", $lookupBarcodes);
         }
 
         return view('tracking.module', compact('modules', 'Barcode'));
+    }
+
+    private function barcodeLookupCandidates(string $barcode): array
+    {
+        if ($barcode === '') {
+            return [];
+        }
+
+        $candidates = [$barcode];
+
+        $trimmed = $barcode;
+        while (str_starts_with($trimmed, '0') && strlen($trimmed) > 1) {
+            $trimmed = substr($trimmed, 1);
+            $candidates[] = $trimmed;
+        }
+
+        return array_values(array_unique(array_filter($candidates, static fn (string $value): bool => $value !== '')));
     }
 
     public function trackOrder(Request $request, $idOrder = null)

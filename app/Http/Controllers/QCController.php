@@ -30,10 +30,7 @@ class QCController extends Controller
         $rawBarcode = trim((string) $request->input('Barcode', ''));
         $Barcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
 
-        $lookupBarcodes = array_values(array_unique(array_filter([
-            $Barcode,
-            ltrim($Barcode, '0'),
-        ], static fn (string $value): bool => $value !== '')));
+        $lookupBarcodes = $this->barcodeLookupCandidates($Barcode);
 
         if (empty($QCStatus) || empty($lookupBarcodes)) {
             return redirect()->route('qc.index')->with('error', 'QC status and barcode are required.');
@@ -85,6 +82,23 @@ class QCController extends Controller
         DB::insert("INSERT INTO useraudit (User, Date, AuditDescription) VALUES(?, NOW(), ?)", [$rn, "QC module:$matchedBarcode"]);
         
         return redirect()->route('qc.index')->with('success', "Module $matchedBarcode added to QC.");
+    }
+
+    private function barcodeLookupCandidates(string $barcode): array
+    {
+        if ($barcode === '') {
+            return [];
+        }
+
+        $candidates = [$barcode];
+
+        $trimmed = $barcode;
+        while (str_starts_with($trimmed, '0') && strlen($trimmed) > 1) {
+            $trimmed = substr($trimmed, 1);
+            $candidates[] = $trimmed;
+        }
+
+        return array_values(array_unique(array_filter($candidates, static fn (string $value): bool => $value !== '')));
     }
 
     public function remove($Barcode, $idOrder)
