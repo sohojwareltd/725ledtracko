@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ReceptionController extends Controller
 {
@@ -51,7 +52,8 @@ class ReceptionController extends Controller
     {
         $rn = Auth::user()->username;
         $ModelModule = trim($request->input('ModelModule', ''));
-        $Barcode = trim($request->input('Barcode', ''));
+        $rawBarcode = trim((string) $request->input('Barcode', ''));
+        $Barcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
         
         if (empty($ModelModule) || empty($Barcode)) {
             return redirect()->route('reception.receive', $idOrder)->with('error', 'required');
@@ -75,9 +77,24 @@ class ReceptionController extends Controller
 
     public function complete(Request $request, $idOrder)
     {
-        $countmod = $request->input('countmod', 0);
-        
-        DB::update("UPDATE orders SET OrderStatus = 'Dropped off', TotModulesReceived = ?, DateDroppedOff = NOW() WHERE idOrder = ?", [$countmod, $idOrder]);
+        $countmod = (int) $request->input('countmod', 0);
+
+        $updatePayload = [
+            'OrderStatus' => 'Dropped off',
+            'TotModulesReceived' => $countmod,
+        ];
+
+        // Legacy parity: historical PHP flow stores reception completion in DateOrderReceived.
+        if (Schema::hasColumn('orders', 'DateOrderReceived')) {
+            $updatePayload['DateOrderReceived'] = now();
+        }
+
+        // Some converted schemas introduced DateDroppedOff. Keep both when available.
+        if (Schema::hasColumn('orders', 'DateDroppedOff')) {
+            $updatePayload['DateDroppedOff'] = now();
+        }
+
+        DB::table('orders')->where('idOrder', $idOrder)->update($updatePayload);
         
         return redirect()->route('reception.index');
     }

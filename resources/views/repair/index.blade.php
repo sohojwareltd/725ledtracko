@@ -84,7 +84,7 @@ function aviso(url){
             @csrf
             <input id="damage" maxlength="17" placeholder="Scan Damage" type="text" name="Damage" required class="form-control" autofocus>
             <input id="damageArea" maxlength="100" placeholder="Scan Damage Area" type="text" name="DamageArea" required class="form-control">
-            <input id="here" maxlength="7" placeholder="Scan Barcode" type="text" name="Barcode" required class="form-control">
+            <input id="here" maxlength="20" placeholder="Scan Barcode" type="text" name="Barcode" required class="form-control" inputmode="numeric" autocomplete="off">
             <button id="subHere" type="submit" class="btn btn-primary">Add</button>
         </form>
     </div>
@@ -145,8 +145,13 @@ $('#damageArea').keyup(function(){
     }
 });
 
-$('#here').keyup(function(){
-    if(this.value.length == 7){ 
+$('#here').on('input keyup', function(){
+    const normalized = String(this.value || '').replace(/\D+/g, '');
+    if (this.value !== normalized) {
+        this.value = normalized;
+    }
+
+    if(normalized.length == 7){ 
         $('#subHere').click(); 
     }
 });

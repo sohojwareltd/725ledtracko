@@ -1,32 +1,48 @@
 @php
     $currentRoute = Route::currentRouteName();
     $username = Auth::user()->username ?? '';
+    $usernameKey = strtolower(trim((string) $username));
     $role = strtolower(trim((string) (Auth::user()->role ?? '')));
-    $isAdmin = $role === 'admin';
+    $legacyOpsUsers = ['pepe', 'ale', 'luis', 'luisc', 'hugo', 'anthony'];
+    $legacyRepairUsers = ['pepe', 'ale', 'luis', 'martin', 'luis1c', 'luisc', 'hugo', 'jefe', 'anthony'];
+    $legacyAdminUsers = ['pepe', 'ale', 'luis'];
 
-    $navItems = [
-        ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'speedometer2', 'match' => ['dashboard']],
-        [
+    $canOps = in_array($role, ['admin', 'reception'], true) || in_array($usernameKey, $legacyOpsUsers, true);
+    $canRepair = in_array($role, ['admin', 'technician', 'repairer'], true) || in_array($usernameKey, $legacyRepairUsers, true);
+    $canQC = in_array($role, ['admin', 'qc', 'qcagent', 'repairer'], true) || in_array($usernameKey, $legacyRepairUsers, true);
+    $isAdmin = $role === 'admin' || in_array($usernameKey, $legacyAdminUsers, true);
+
+    $navItems = [];
+
+    if ($canOps) {
+        $navItems[] = ['route' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'speedometer2', 'match' => ['dashboard', 'dashboard.alt']];
+        $navItems[] = [
             'route' => 'orders.index',
             'label' => 'Orders',
             'icon' => 'basket2',
             'match' => ['orders.index', 'orders.edit', 'orders.done'],
-        ],
-        [
+        ];
+        $navItems[] = [
             'route' => 'reception.index',
             'label' => 'Reception',
             'icon' => 'box-arrow-in-down',
             'match' => ['reception.index', 'reception.receive', 'reception.details'],
-        ],
-        ['route' => 'repair.index', 'label' => 'Repair', 'icon' => 'tools', 'match' => ['repair.index']],
-        ['route' => 'qc.index', 'label' => 'QC', 'icon' => 'check2-circle', 'match' => ['qc.index']],
-        [
+        ];
+        $navItems[] = [
             'route' => 'tracking.index',
             'label' => 'Tracking',
             'icon' => 'geo-alt',
-            'match' => ['tracking.index', 'tracking.module', 'tracking.order'],
-        ],
-    ];
+            'match' => ['tracking.index', 'tracking.module', 'tracking.order', 'tracking.print'],
+        ];
+    }
+
+    if ($canRepair) {
+        $navItems[] = ['route' => 'repair.index', 'label' => 'Repair', 'icon' => 'tools', 'match' => ['repair.index']];
+    }
+
+    if ($canQC) {
+        $navItems[] = ['route' => 'qc.index', 'label' => 'QC', 'icon' => 'check2-circle', 'match' => ['qc.index', 'qc.rejected']];
+    }
 @endphp
 
 <aside class="app-sidebar" id="appSidebar">

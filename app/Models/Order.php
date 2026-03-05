@@ -12,23 +12,26 @@ class Order extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'OrderName',
-        'OrderDate',
-        'CustomerPhone',
-        'CustomerEmail',
-        'TotalModules',
+        'CompanyName',
+        'idUser',
+        'idUserLastUpdated',
+        'TotModulesCaptured',
         'TotModulesReceived',
-        'Status',
-        'Notes',
-        'CreatedBy',
+        'OrderStatus',
+        'DateOrderCaptured',
+        'DateLastModification',
+        'DateOrderReceived',
+        'Location',
+        'duedate',
         'DateDroppedOff',
-        'DateCompleted',
     ];
 
     protected $casts = [
-        'OrderDate' => 'datetime',
+        'DateOrderCaptured' => 'datetime',
+        'DateLastModification' => 'datetime',
+        'DateOrderReceived' => 'datetime',
+        'duedate' => 'datetime',
         'DateDroppedOff' => 'datetime',
-        'DateCompleted' => 'datetime',
     ];
 
     // Get all modules in this order
@@ -70,16 +73,17 @@ class Order extends Model
     // Check if order is complete
     public function isComplete(): bool
     {
-        return $this->Status === 'Done' || 
-               ($this->TotalModules > 0 && 
-                $this->modules()->where('QCStatus', 'Passed')->count() === $this->TotalModules);
+        return in_array(strtolower((string) $this->OrderStatus), ['completed', 'done'], true);
     }
 
     // Get completion percentage
     public function getCompletionPercentage(): int
     {
-        if ($this->TotalModules === 0) return 0;
+        if ((int) $this->TotModulesReceived === 0) {
+            return 0;
+        }
+
         $completed = $this->modules()->where('QCStatus', 'Passed')->count();
-        return round(($completed / $this->TotalModules) * 100);
+        return (int) round(($completed / (int) $this->TotModulesReceived) * 100);
     }
 }

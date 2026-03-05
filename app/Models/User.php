@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 
 /**
  * @property string|null $username
@@ -14,15 +15,18 @@ use Illuminate\Notifications\Notifiable;
  * @property string|null $Password
  * @property string|null $Role
  * @property string|null $FullName
- * @property int $id
+ * @property int|null $id
+ * @property int|null $idUser
  */
 class User extends Authenticatable
 {
     use HasFactory, Notifiable;
 
     protected $table = 'users';
-    protected $primaryKey = 'id';
-    public $timestamps = true;
+    protected $primaryKey = 'idUser';
+    public $timestamps = false;
+    public $incrementing = true;
+    protected $keyType = 'int';
 
     protected $fillable = [
         'UserName',
@@ -44,9 +48,20 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    // DO NOT override getAuthIdentifierName - defaults to 'id'
-    // The old override returning 'username' caused login failure
-    // because Auth stored numeric ID but queried WHERE username = 1
+    public function getAuthIdentifierName(): string
+    {
+        // Support both legacy (`idUser`) and Laravel-default (`id`) user tables.
+        try {
+            return Schema::hasColumn($this->getTable(), 'idUser') ? 'idUser' : 'id';
+        } catch (\Throwable $e) {
+            return $this->primaryKey;
+        }
+    }
+
+    public function getKeyName(): string
+    {
+        return $this->getAuthIdentifierName();
+    }
 
     public function getUsernameAttribute(): ?string
     {
@@ -75,6 +90,6 @@ class User extends Authenticatable
 
     public function isAdmin()
     {
-        return $this->role === 'Admin';
+        return strtolower((string) $this->role) === 'admin';
     }
 }

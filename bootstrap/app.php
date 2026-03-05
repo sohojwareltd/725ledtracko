@@ -22,12 +22,14 @@ return Application::configure(basePath: dirname(__DIR__))
                      Request::HEADER_X_FORWARDED_PROTO |
                      Request::HEADER_X_FORWARDED_AWS_ELB
         );
+
+        $middleware->alias([
+            'role' => \App\Http\Middleware\CheckRole::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         // Handle CSRF token mismatch (Page Expired)
         $exceptions->render(function (TokenMismatchException $e, $request) {
-            return back()->withErrors([
-                'session' => 'Your session has expired. Please try again.',
-            ])->withInput();
+            return back()->with('error', 'Your session has expired. Please try again.')->withInput();
         });
     })->create();

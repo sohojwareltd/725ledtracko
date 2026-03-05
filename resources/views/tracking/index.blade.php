@@ -20,7 +20,7 @@
         </div>
         <form action="{{ route('tracking.module') }}" method="POST" class="section-stack">
             @csrf
-            <input type="text" class="form-control" name="Barcode" placeholder="Scan barcode" maxlength="20" required>
+            <input id="trackBarcode" type="text" class="form-control" name="Barcode" placeholder="Scan barcode" maxlength="20" required inputmode="numeric" autocomplete="off">
             <button type="submit" class="btn btn-primary w-100">Go</button>
         </form>
     </div>
@@ -41,4 +41,22 @@
         </form>
     </div>
 </section>
+@endsection
+
+@section('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const barcodeInput = document.getElementById('trackBarcode');
+    if (!barcodeInput) {
+        return;
+    }
+
+    barcodeInput.addEventListener('input', function () {
+        const normalized = String(this.value || '').replace(/\D+/g, '');
+        if (this.value !== normalized) {
+            this.value = normalized;
+        }
+    });
+});
+</script>
 @endsection

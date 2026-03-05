@@ -28,54 +28,53 @@ class QCController extends Controller
         $rn = Auth::user()->username;
         $QCStatus = trim($request->input('QCStatus', ''));
         $rawBarcode = trim((string) $request->input('Barcode', ''));
-        $digitsBarcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
+        $Barcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
 
-        // Keep legacy behavior: fallback to last-4 candidate when needed.
-        $barcodeCandidates = array_values(array_unique(array_filter([
-            $rawBarcode,
-            $digitsBarcode,
-            $digitsBarcode !== '' ? ltrim($digitsBarcode, '0') : '',
-            strlen($digitsBarcode) >= 4 ? substr($digitsBarcode, -4) : '',
-        ], static fn ($v) => $v !== '')));
-        
-        if (empty($QCStatus) || empty($barcodeCandidates)) {
+        $lookupBarcodes = array_values(array_unique(array_filter([
+            $Barcode,
+            ltrim($Barcode, '0'),
+        ], static fn (string $value): bool => $value !== '')));
+
+        if (empty($QCStatus) || empty($lookupBarcodes)) {
             return redirect()->route('qc.index')->with('error', 'QC status and barcode are required.');
         }
-        
-        $orderResult = [];
-        $matchedBarcode = null;
 
-        // Find latest order for candidate barcode that already has repair info.
-        foreach ($barcodeCandidates as $candidate) {
-            $orderResult = DB::select(
-                "SELECT idOrder, Barcode
-                 FROM orderdetails
-                 WHERE Barcode = ? AND DateRepair IS NOT NULL
-                 ORDER BY idOrder DESC
-                 LIMIT 1",
-                [$candidate]
-            );
+        $placeholders = implode(', ', array_fill(0, count($lookupBarcodes), '?'));
 
-            if (!empty($orderResult)) {
-                $matchedBarcode = (string) $orderResult[0]->Barcode;
-                break;
-            }
-        }
+        $orderResult = DB::select(
+            "SELECT idOrderDetail, idOrder, Barcode
+             FROM orderdetails
+             WHERE Barcode IN ($placeholders) AND DateRepair IS NOT NULL
+             ORDER BY idOrder DESC, idOrderDetail DESC
+             LIMIT 1",
+            $lookupBarcodes
+        );
         
         if (empty($orderResult)) {
             return redirect()->route('qc.index')->with('error', 'Barcode not ready for QC (missing repair data).');
         }
         
+        $idOrderDetail = $orderResult[0]->idOrderDetail;
         $idOrder = $orderResult[0]->idOrder;
+        $matchedBarcode = (string) $orderResult[0]->Barcode;
+
+        if (
+            str_starts_with($Barcode, '0')
+            && $Barcode !== $matchedBarcode
+            && ltrim($Barcode, '0') === ltrim($matchedBarcode, '0')
+        ) {
+            DB::update("UPDATE orderdetails SET Barcode = ? WHERE idOrderDetail = ?", [$Barcode, $idOrderDetail]);
+            $matchedBarcode = $Barcode;
+        }
         
-        $updatedRows = DB::update("UPDATE orderdetails SET QCStatus = ?, DateQC = NOW(), QCAgent = ? WHERE idOrder = ? AND Barcode = ?", [
-            $QCStatus, $rn, $idOrder, $matchedBarcode
+        $updatedRows = DB::update("UPDATE orderdetails SET QCStatus = ?, DateQC = NOW(), QCAgent = ? WHERE idOrderDetail = ?", [
+            $QCStatus, $rn, $idOrderDetail
         ]);
 
         if ($updatedRows === 0) {
             $exists = DB::select(
-                "SELECT 1 FROM orderdetails WHERE idOrder = ? AND Barcode = ? AND DateRepair IS NOT NULL LIMIT 1",
-                [$idOrder, $matchedBarcode]
+                "SELECT 1 FROM orderdetails WHERE idOrderDetail = ? AND DateRepair IS NOT NULL LIMIT 1",
+                [$idOrderDetail]
             );
 
             if (empty($exists)) {

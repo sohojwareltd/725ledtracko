@@ -83,7 +83,7 @@ function aviso(url){
         <form action="{{ route('qc.store') }}" method="POST" class="form-grid">
             @csrf
             <input id="qcStatus" maxlength="17" placeholder="Scan QC Status" type="text" name="QCStatus" required class="form-control" autofocus>
-            <input id="hereQC" maxlength="7" placeholder="Scan Barcode" type="text" name="Barcode" required class="form-control">
+            <input id="hereQC" maxlength="20" placeholder="Scan Barcode" type="text" name="Barcode" required class="form-control" inputmode="numeric" autocomplete="off">
             <button id="subHereQC" type="submit" class="btn btn-primary">Add</button>
         </form>
     </div>
@@ -139,8 +139,13 @@ $('#qcStatus').keyup(function(){
     }
 });
 
-$('#hereQC').keyup(function(){
-    if(this.value.length == 7){
+$('#hereQC').on('input keyup', function(){
+    const normalized = String(this.value || '').replace(/\D+/g, '');
+    if (this.value !== normalized) {
+        this.value = normalized;
+    }
+
+    if(normalized.length == 7){
         $('#subHereQC').click();
     }
 });

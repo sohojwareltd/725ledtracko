@@ -17,8 +17,12 @@ class AdminController extends Controller
             return redirect('/')->with('error', "Access denied. Administrator access only.");
         }
         
-        $messageResult = DB::select("SELECT * FROM messages ORDER BY Id_Message DESC LIMIT 1");
-        $message = !empty($messageResult) ? $messageResult[0] : null;
+        try {
+            $messageResult = DB::select("SELECT * FROM messages ORDER BY Id_Message DESC LIMIT 1");
+            $message = !empty($messageResult) ? $messageResult[0] : null;
+        } catch (\Exception $e) {
+            $message = null;
+        }
         
         return view('admin.index', compact('message'));
     }
@@ -34,12 +38,30 @@ class AdminController extends Controller
         $Message = $request->input('Message', '');
         $Message2 = $request->input('Message2', '');
         $Message3 = $request->input('Message3', '');
-        
-        if (!empty($Message)) {
-            DB::update("UPDATE messages SET Message = ?, Message2 = ?, Message3 = ?", [$Message, $Message2, $Message3]);
+
+        if (trim($Message) === '') {
+            return redirect()->route('admin.index')->with('error', 'No text added to Message Module.');
+        }
+
+        try {
+            $existing = DB::select("SELECT Id_Message FROM messages ORDER BY Id_Message DESC LIMIT 1");
+
+            if (!empty($existing)) {
+                DB::update(
+                    "UPDATE messages SET Message = ?, Message2 = ?, Message3 = ? WHERE Id_Message = ?",
+                    [$Message, $Message2, $Message3, $existing[0]->Id_Message]
+                );
+            } else {
+                DB::insert(
+                    "INSERT INTO messages (Message, Message2, Message3) VALUES (?, ?, ?)",
+                    [$Message, $Message2, $Message3]
+                );
+            }
+        } catch (\Exception $e) {
+            return redirect()->route('admin.index')->with('error', 'Unable to update messages.');
         }
         
-        return redirect()->route('admin.index');
+        return redirect()->route('admin.index')->with('success', 'Messages updated.');
     }
 
     public function setRepaired(Request $request)

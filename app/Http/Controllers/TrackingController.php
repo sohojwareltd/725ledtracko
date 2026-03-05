@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class TrackingController extends Controller
@@ -15,10 +14,21 @@ class TrackingController extends Controller
 
     public function trackModule(Request $request)
     {
-        $Barcode = $request->input('Barcode', '');
-        
-        $modules = DB::select("SELECT * FROM orderdetails WHERE Barcode = ?", [$Barcode]);
-        
+        $rawBarcode = trim((string) $request->input('Barcode', ''));
+        $Barcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
+
+        if ($Barcode === '') {
+            $modules = [];
+        } else {
+            $lookupBarcodes = array_values(array_unique(array_filter([
+                $Barcode,
+                ltrim($Barcode, '0'),
+            ], static fn (string $value): bool => $value !== '')));
+
+            $placeholders = implode(', ', array_fill(0, count($lookupBarcodes), '?'));
+            $modules = DB::select("SELECT * FROM orderdetails WHERE Barcode IN ($placeholders)", $lookupBarcodes);
+        }
+
         return view('tracking.module', compact('modules', 'Barcode'));
     }
 

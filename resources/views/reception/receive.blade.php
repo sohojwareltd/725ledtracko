@@ -157,7 +157,7 @@
                 <h2 class="section-title">Scan Barcode</h2>
             </div>
         </div>
-        <form action="{{ route('reception.addModule', $order->idOrder) }}" method="POST" class="section-stack">
+        <form id="addModuleForm" action="{{ route('reception.addModule', $order->idOrder) }}" method="POST" class="section-stack">
             @csrf
             <div class="form-grid">
                 <div>
@@ -174,8 +174,8 @@
                 </div>
                 <div>
                     <label class="muted">Barcode</label>
-                    <input id="here" minlength="4" maxlength="7" placeholder="Scan barcode..." type="text" 
-                           name="Barcode" tabindex="1" required autofocus class="form-control">
+                          <input id="here" minlength="4" maxlength="20" placeholder="Scan barcode..." type="text" 
+                              name="Barcode" tabindex="1" required autofocus class="form-control" inputmode="numeric" autocomplete="off">
                     <div id="barcodeError" class="error-message">Barcode must be 1000 or higher</div>
                     <input type="hidden" name="idOrder" value="{{ $order->idOrder }}">
                 </div>
@@ -246,14 +246,32 @@
 <script>
 let barcodeValid = true;
 
+function normalizeBarcode(value) {
+    return String(value || '').replace(/\D+/g, '');
+}
+
+function isBarcodeTooSmall(value) {
+    const normalized = normalizeBarcode(value);
+    if (!normalized) {
+        return false;
+    }
+
+    const numeric = Number(normalized);
+    return Number.isFinite(numeric) && numeric >= 0 && numeric <= 999;
+}
+
 $('#here').on('input keyup', function(){
-    const value = parseInt(this.value);
+    const normalized = normalizeBarcode(this.value);
+    if (this.value !== normalized) {
+        this.value = normalized;
+    }
+
     const inputField = $(this);
     const errorMessage = $('#barcodeError');
     const submitButton = $('#subHere');
 
     // Barcode 0-999 invalid, 1000+ valid
-    if (this.value && value >= 0 && value <= 999) {
+    if (isBarcodeTooSmall(normalized)) {
         inputField.addClass('error');
         errorMessage.addClass('show');
         submitButton.prop('disabled', true);
@@ -266,15 +284,15 @@ $('#here').on('input keyup', function(){
     }
 
     // Auto-submit when 7 digits AND valid
-    if (this.value.length == 7 && barcodeValid) {
+    if (normalized.length === 7 && barcodeValid) {
         $('#subHere').click();
     }
 });
 
 // Prevent form submission if barcode is invalid
-$('form').on('submit', function(e) {
-    const barcodeValue = parseInt($('#here').val());
-    if ($('#here').val() && barcodeValue >= 0 && barcodeValue <= 999) {
+$('#addModuleForm').on('submit', function(e) {
+    const barcodeValue = normalizeBarcode($('#here').val());
+    if (isBarcodeTooSmall(barcodeValue)) {
         e.preventDefault();
         showToast('error', 'Invalid Barcode', 'Barcode must be 1000 or higher');
         return false;

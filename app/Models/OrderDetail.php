@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class OrderDetail extends Model
 {
-    protected $table = 'order_details';
+    protected $table = 'orderdetails';
+    protected $primaryKey = 'idOrderDetail';
+    public $incrementing = true;
+    protected $keyType = 'int';
     public $timestamps = false;
 
     protected $fillable = [
@@ -15,22 +18,20 @@ class OrderDetail extends Model
         'Barcode',
         'ModuleModel',
         'Damage',
+        'RepairArea',
         'DateReceived',
-        'ReceivedBy',
         'DateRepair',
-        'RepairedBy',
-        'RepairNotes',
+        'repairer',
         'QCStatus',
-        'QCDate',
+        'DateQC',
         'QCAgent',
-        'QCNotes',
-        'RepairTime',
+        'QCRejectedArea',
     ];
 
     protected $casts = [
         'DateReceived' => 'datetime',
         'DateRepair' => 'datetime',
-        'QCDate' => 'datetime',
+        'DateQC' => 'datetime',
     ];
 
     // Belongs to Order
@@ -42,19 +43,13 @@ class OrderDetail extends Model
     // Get the technician who repaired this module
     public function technician()
     {
-        return User::where('UserName', $this->RepairedBy)->first();
+        return User::where('UserName', $this->repairer)->first();
     }
 
     // Get the QC agent who inspected this module
     public function qcAgent()
     {
         return User::where('UserName', $this->QCAgent)->first();
-    }
-
-    // Get the reception staff who received this module
-    public function receptionist()
-    {
-        return User::where('UserName', $this->ReceivedBy)->first();
     }
 
     // Get module status
@@ -66,7 +61,7 @@ class OrderDetail extends Model
         if (is_null($this->DateRepair)) {
             return 'Awaiting Repair';
         }
-        if (is_null($this->QCDate)) {
+        if (is_null($this->DateQC)) {
             return 'Awaiting QC';
         }
         if ($this->QCStatus === 'Passed') {
@@ -87,13 +82,6 @@ class OrderDetail extends Model
     // Check if module can undergo QC (repaired but not yet inspected)
     public function canUndergoQC(): bool
     {
-        return !is_null($this->DateRepair) && is_null($this->QCDate);
-    }
-
-    // Get repair duration in hours
-    public function getRepairDurationHours(): float
-    {
-        if (is_null($this->RepairTime)) return 0;
-        return $this->RepairTime / 60;
+        return !is_null($this->DateRepair) && is_null($this->DateQC);
     }
 }

@@ -29,51 +29,52 @@ class RepairController extends Controller
         $Damage = trim($request->input('Damage', ''));
         $DamageArea = trim($request->input('DamageArea', ''));
         $rawBarcode = trim((string) $request->input('Barcode', ''));
-        $digitsBarcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
+        $Barcode = preg_replace('/\D+/', '', $rawBarcode) ?? '';
 
-        // Keep legacy behavior: if full value does not match, try numeric and last-4 candidates.
-        $barcodeCandidates = array_values(array_unique(array_filter([
-            $rawBarcode,
-            $digitsBarcode,
-            $digitsBarcode !== '' ? ltrim($digitsBarcode, '0') : '',
-            strlen($digitsBarcode) >= 4 ? substr($digitsBarcode, -4) : '',
-        ], static fn ($v) => $v !== '')));
-        
-        if (empty($Damage) || empty($DamageArea) || empty($barcodeCandidates)) {
+        $lookupBarcodes = array_values(array_unique(array_filter([
+            $Barcode,
+            ltrim($Barcode, '0'),
+        ], static fn (string $value): bool => $value !== '')));
+
+        if (empty($Damage) || empty($DamageArea) || empty($lookupBarcodes)) {
             return redirect()->route('repair.index')->with('error', 'Please scan the damage, damage area, and barcode.');
         }
-        
-        $orderResult = [];
-        $matchedBarcode = null;
 
-        foreach ($barcodeCandidates as $candidate) {
-            $orderResult = DB::select(
-                "SELECT idOrder, Barcode FROM orderdetails WHERE Barcode = ? ORDER BY idOrder DESC LIMIT 1",
-                [$candidate]
-            );
-
-            if (!empty($orderResult)) {
-                $matchedBarcode = (string) $orderResult[0]->Barcode;
-                break;
-            }
-        }
+        $placeholders = implode(', ', array_fill(0, count($lookupBarcodes), '?'));
+        $orderResult = DB::select(
+            "SELECT idOrderDetail, idOrder, Barcode FROM orderdetails WHERE Barcode IN ($placeholders) ORDER BY idOrder DESC, idOrderDetail DESC LIMIT 1",
+            $lookupBarcodes
+        );
         
         if (empty($orderResult)) {
             return redirect()->route('repair.index')->with('error', 'Barcode not found. Please verify the scan.');
         }
         
+        $idOrderDetail = $orderResult[0]->idOrderDetail;
         $idOrder = $orderResult[0]->idOrder;
+        $matchedBarcode = (string) $orderResult[0]->Barcode;
+
+        // If the scanner provides a zero-padded barcode that maps to legacy numeric data,
+        // persist the padded value so operators consistently see what they scanned.
+        if (
+            str_starts_with($Barcode, '0')
+            && $Barcode !== $matchedBarcode
+            && ltrim($Barcode, '0') === ltrim($matchedBarcode, '0')
+        ) {
+            DB::update("UPDATE orderdetails SET Barcode = ? WHERE idOrderDetail = ?", [$Barcode, $idOrderDetail]);
+            $matchedBarcode = $Barcode;
+        }
         
-        $updatedRows = DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ?, RepairArea = ? WHERE idOrder = ? AND Barcode = ?", [
-            $Damage, $rn, $DamageArea, $idOrder, $matchedBarcode
+        $updatedRows = DB::update("UPDATE orderdetails SET Damage = ?, DateRepair = NOW(), repairer = ?, RepairArea = ? WHERE idOrderDetail = ?", [
+            $Damage, $rn, $DamageArea, $idOrderDetail
         ]);
 
         if ($updatedRows === 0) {
             // MySQL can return 0 when data is already the same (or double-submit happens quickly).
             // If the matched row still exists, treat this as a successful capture to avoid false errors.
             $exists = DB::select(
-                "SELECT 1 FROM orderdetails WHERE idOrder = ? AND Barcode = ? LIMIT 1",
-                [$idOrder, $matchedBarcode]
+                "SELECT 1 FROM orderdetails WHERE idOrderDetail = ? LIMIT 1",
+                [$idOrderDetail]
             );
 
             if (empty($exists)) {
